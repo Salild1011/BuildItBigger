@@ -1,0 +1,89 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.1"
+
+    defaultConfig {
+        applicationId "com.udacity.gradle.builditbigger"
+        minSdkVersion 15
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+        multiDexEnabled true
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        debug {
+            buildConfigField "String", "SERVER_URL", "\"http://192.168.0.101:8080/_ah/api/\""
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    productFlavors {
+        free {
+            applicationId "com.udacity.gradle.builditbigger.free"
+        }
+        paid {
+            applicationId "com.udacity.gradle.builditbigger.paid"
+        }
+    }
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            res.srcDirs = ['src/main/res']
+        }
+        free {
+            java.srcDirs = ['src/free/java']
+            res.srcDirs = ['src/free/res']
+        }
+        paid {
+            java.srcDirs = ['src/paid/java']
+            res.srcDirs = ['src/paid/res']
+        }
+    }
+}
+
+task startGce (dependsOn: ":jokesbackend:appengineRun") {
+    project(":jokesbackend").afterEvaluate { backend ->
+        backend.extensions.appengine.daemon = true
+    }
+    finalizedBy "runTests"
+    doLast {
+        println "Started the server"
+    }
+}
+
+task runTests {
+    dependsOn "test"
+    shouldRunAfter "startGce"
+    finalizedBy "stopGce"
+    doLast {
+        println "Ran all the tests"
+    }
+}
+
+task stopGce {
+    dependsOn ":jokesbackend:appengineStop"
+    doLast {
+        println "Stopped the server"
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+
+    compile project(':jokeslibrary')
+    compile project(':androlibrary')
+    compile project(path: ':jokesbackend', configuration: 'android-endpoints')
+    compile 'com.android.support:appcompat-v7:24.2.1'
+    compile 'com.google.code.findbugs:jsr305:2.0.1'
+    compile 'com.android.support:design:24.2.1'
+    compile 'com.google.android.gms:play-services-ads:9.8.0'
+}
